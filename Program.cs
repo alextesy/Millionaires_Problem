@@ -10,6 +10,7 @@ namespace Millionaires_Problem
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("YALLA POTHIM PORTIM");
         }
     }
 }
