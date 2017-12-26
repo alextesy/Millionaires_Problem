@@ -18,10 +18,8 @@ namespace Millionaires_Problem
         public Boat(String name)
         {
             this.name = MakeName(name);
-
             this.tcpListener = new TcpListener(IPAddress.Any, 0);
             stop = true;
-
         }
 
         private string MakeName(string name)
@@ -45,6 +43,7 @@ namespace Millionaires_Problem
         public void startListen()
         {
             tcpListener.Start();
+            Console.WriteLine(((IPEndPoint)tcpListener.LocalEndpoint).Port);
             while (stop)
             {
 
@@ -58,8 +57,24 @@ namespace Millionaires_Problem
             {
                 UdpClient client = new UdpClient();
                 IPEndPoint ip = new IPEndPoint(IPAddress.Broadcast, 5656);
-                byte[] bytes = Encoding.ASCII.GetBytes("IntroToNets" + name + ((IPEndPoint)tcpListener.LocalEndpoint).Port);
-                client.Send(bytes, bytes.Length, ip);
+
+                byte[] bytes = BitConverter.GetBytes(Int16.Parse(((IPEndPoint)tcpListener.LocalEndpoint).Port.ToString()));
+                if (BitConverter.IsLittleEndian)
+                    Array.Reverse(bytes);
+
+                byte[] bytesReturn = Encoding.ASCII.GetBytes("IntroToNets" + name);
+                byte[] res = new byte[bytes.Length + bytesReturn.Length];
+                for(int i = 0; i < bytesReturn.Length; i++)
+                {
+                    res[i] = bytesReturn[i];
+                }
+                int k = 0;
+                for(int j = bytesReturn.Length; j < res.Length; j++)
+                {
+                    res[j] = bytes[k];
+                    k++;
+                }
+                client.Send(res, res.Length, ip);
                 client.Close();
                 Thread.Sleep(60000);
             }

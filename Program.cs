@@ -13,11 +13,16 @@ namespace Millionaires_Problem
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello, what is the name of the Ship?");
+            Console.WriteLine("Hello, what is the name of the Boat?");
             String a = Console.ReadLine();
             Boat shani = new Boat(a);
             Thread startListening = new Thread(new ThreadStart(shani.startListen));
             startListening.Start();
+            Console.WriteLine("Hello, what is your name, Millionaire ?");
+            String b = Console.ReadLine();
+            Millionaire alex = new Millionaire(b);
+            Thread mill = new Thread(new ThreadStart(alex.Looking));
+            mill.Start();
             Thread broadcast = new Thread(new ThreadStart(shani.Broadcast));
             broadcast.Start();
 

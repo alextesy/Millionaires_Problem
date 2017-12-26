@@ -1,0 +1,7 @@
+D:\documents\users\kremians\Documents\GitHub\Millionaires_Problem\bin\Debug\Millionaires_Problem.exe.config
+D:\documents\users\kremians\Documents\GitHub\Millionaires_Problem\bin\Debug\Millionaires_Problem.exe
+D:\documents\users\kremians\Documents\GitHub\Millionaires_Problem\bin\Debug\Millionaires_Problem.pdb
+D:\documents\users\kremians\Documents\GitHub\Millionaires_Problem\obj\Debug\Millionaires_Problem.csprojResolveAssemblyReference.cache
+D:\documents\users\kremians\Documents\GitHub\Millionaires_Problem\obj\Debug\Millionaires_Problem.csproj.CoreCompileInputs.cache
+D:\documents\users\kremians\Documents\GitHub\Millionaires_Problem\obj\Debug\Millionaires_Problem.exe
+D:\documents\users\kremians\Documents\GitHub\Millionaires_Problem\obj\Debug\Millionaires_Problem.pdb
