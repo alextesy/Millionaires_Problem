@@ -10,12 +10,16 @@ namespace Millionaires_Problem
 {
     class Millionaire 
     {
-        String name;
-        UdpClient udp;
-        String boatName;
-        TcpClient tcp;
+        private String name;
+        private UdpClient udp;
+        private String boatName="";
+        private TcpClient tcp;
+        Dictionary<String, millClass> millDic;
+
+
         public Millionaire(String name)
         {
+            millDic = new Dictionary<string, millClass>();
             this.name = name;
             udp = new UdpClient(5656);
 
@@ -25,7 +29,6 @@ namespace Millionaires_Problem
             IPEndPoint iPEndPoint = new IPEndPoint(IPAddress.Any, 0);
             Console.WriteLine("[Looking for a new boat...]");
             byte[] data=udp.Receive(ref iPEndPoint);
-            Console.WriteLine("[Requesting to board The Royal Princess…]");
             byte[] temp = new byte[32];
             byte[] portArr = new byte[2];
 
@@ -34,9 +37,17 @@ namespace Millionaires_Problem
             if (BitConverter.IsLittleEndian)
                 Array.Reverse(portArr);
             int port= BitConverter.ToInt16(portArr, 0);
-            boatName = Encoding.Default.GetString(temp);
+            String boatNameTemp = Encoding.Default.GetString(temp);
+            for(int i = 0; i < boatNameTemp.Length; i++)
+            {
+                if (boatNameTemp[i] == '%')
+                {
+                    boatName += boatNameTemp[i];
+                }
+            }
+            Console.WriteLine("[Requesting to board "+ boatName+"...]");
             tcp.Connect(iPEndPoint.Address, port);
-            Console.WriteLine("[I am now aboard The Royal Princess!]");
+            Console.WriteLine("[I am now aboard "+boatName+"!]");
 
 
         }

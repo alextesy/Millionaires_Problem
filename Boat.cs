@@ -14,9 +14,11 @@ namespace Millionaires_Problem
         private Boolean stop;
         private TcpListener tcpListener;
         private String name;
-
+        private Dictionary<String, millClass> millDic;
+        private millClass richest;
         public Boat(String name)
         {
+            this.millDic = new Dictionary<string, millClass>();
             this.name = MakeName(name);
             this.tcpListener = new TcpListener(IPAddress.Any, 0);
             stop = true;
@@ -46,10 +48,37 @@ namespace Millionaires_Problem
             Console.WriteLine(((IPEndPoint)tcpListener.LocalEndpoint).Port);
             while (stop)
             {
-
+        
                 Socket socket = tcpListener.AcceptSocket();
+                byte[] msg = Encoding.ASCII.GetBytes("Wellcome to the " + name + "! What is your name?");
+                socket.Send(msg);
+                byte[] answer = new byte[256];
+                socket.Receive(answer);
+                String millName = Encoding.UTF8.GetString(answer);
+
+                millClass temp = new millClass(socket, millName, 0);
+                millDic.Add(millName, temp));
+
+                if (richest == null)
+                {
+                    richest = temp;
+                }
+                else
+                {
+                    if (richest.Money < temp.Money)
+                        richest = temp;
+                }
+
+
             }
             tcpListener.Stop();
+        }
+        public void sendToAll(millClass newMill) {
+            string message = "A Millionaire named " + newMill.Name + " has joined the boat.The richest person on the boat right now is " + richest.Name;
+            foreach(millClass mill in millDic.Values)
+            {
+                mill.socket.Send(Encoding.ASCII.GetBytes(message));
+            }
         }
         public void Broadcast()
         {
@@ -79,5 +108,6 @@ namespace Millionaires_Problem
                 Thread.Sleep(60000);
             }
         }
+        
     }
 }
