@@ -25,6 +25,8 @@ namespace Millionaires_Problem
             mill.Start();
             Thread broadcast = new Thread(new ThreadStart(shani.Broadcast));
             broadcast.Start();
+            Thread stopListen = new Thread(new ThreadStart(Boat.stoptheBoat));
+            stopListen.Start();
 
             Console.WriteLine("YALLA POTHIM PORTIM");
         }

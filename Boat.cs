@@ -1,27 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Millionaires_Problem
 {
     class Boat
     {
-        private Boolean stop;
+
         private TcpListener tcpListener;
         private String name;
-        private Dictionary<String, millClass> millDic;
-        private millClass richest;
+        private static Dictionary<String, millClass> millDic= new Dictionary<string, millClass>();
+        private static millClass richest;
+        private static bool stop = true;
+
         public Boat(String name)
         {
-            this.millDic = new Dictionary<string, millClass>();
             this.name = MakeName(name);
             this.tcpListener = new TcpListener(IPAddress.Any, 0);
-            stop = true;
+        }
+        public static void stoptheBoat() {
+            String a = Console.ReadLine();
+            if(a[0]=='\r')
+                stop = false;
+            
         }
 
         private string MakeName(string name)
@@ -41,24 +45,63 @@ namespace Millionaires_Problem
             }
             return name;
         }
-
+        
         public void startListen()
         {
             tcpListener.Start();
-            Console.WriteLine(((IPEndPoint)tcpListener.LocalEndpoint).Port);
+
             while (stop)
             {
-        
+
                 Socket socket = tcpListener.AcceptSocket();
-                byte[] msg = Encoding.ASCII.GetBytes("Wellcome to the " + name + "! What is your name?");
-                socket.Send(msg);
-                byte[] answer = new byte[256];
-                socket.Receive(answer);
-                String millName = Encoding.UTF8.GetString(answer);
+                Thread startListening = new Thread(() => handleClient(socket));
+                startListening.Start(socket);
+                
+            }
+            tcpListener.Stop();
+        }
+        public void handleClient(Socket socket)
+        {
+            byte[] msg = Encoding.ASCII.GetBytes("Wellcome to the " + name + "! What is your name?");
+            socket.Send(msg);
+            byte[] answer = new byte[256];
+            socket.Receive(answer);
+            String millName = Encoding.UTF8.GetString(answer);
+            millClass temp = new millClass(socket, millName, 0);
+            lock (millDic) {
+                millDic.Add(millName, temp);
+            }
+            checkRich(temp);
+            sendToAll(temp);
+            while (stop)
+            {
+                byte[] conversation =new byte[256];
+                socket.Receive(conversation);
+                
+            
+                if (conversation[0]=='\r')
+                {
+                    break;
+                }
+                int money=Int32.Parse(Encoding.UTF8.GetString(answer));
+                temp.Money = money;
+                checkRich(temp);
+                sendToAll2(temp);
 
-                millClass temp = new millClass(socket, millName, 0);
-                millDic.Add(millName, temp));
-
+            }
+            lock (millDic)
+            {
+               millDic.Remove(millName);
+            }
+            socket.Close();
+            
+            
+            
+        }
+        public static void checkRich(millClass temp)
+        {
+            lock (richest)
+            {
                 if (richest == null)
                 {
                     richest = temp;
@@ -68,10 +111,16 @@ namespace Millionaires_Problem
                     if (richest.Money < temp.Money)
                         richest = temp;
                 }
-
-
             }
-            tcpListener.Stop();
+        }
+
+        public void sendToAll2(millClass newMill)
+        {
+            string message = newMill.Name + " has updated his/her income.The richest person on the boat right now is " + richest.Name;
+            foreach (millClass mill in millDic.Values)
+            {
+                mill.socket.Send(Encoding.ASCII.GetBytes(message));
+            }
         }
         public void sendToAll(millClass newMill) {
             string message = "A Millionaire named " + newMill.Name + " has joined the boat.The richest person on the boat right now is " + richest.Name;
