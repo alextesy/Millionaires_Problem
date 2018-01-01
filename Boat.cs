@@ -15,11 +15,23 @@ namespace Millionaires_Problem
         private static Dictionary<String, millClass> millDic= new Dictionary<string, millClass>();
         private static millClass richest;
         private static bool stop = true;
-
+        public static string GetLocalIPAddress()
+        {
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    return ip.ToString();
+                }
+            }
+            throw new Exception("No network adapters with an IPv4 address in the system!");
+        }
         public Boat(String name)
         {
-            this.name = MakeName(name);
-            this.tcpListener = new TcpListener(IPAddress.Any, 0);
+            this.name = name;
+            IPAddress ip = IPAddress.Parse(GetLocalIPAddress());
+            this.tcpListener = new TcpListener(0);
         }
         public static void stoptheBoat() {
             String a = Console.ReadLine();
@@ -55,7 +67,7 @@ namespace Millionaires_Problem
 
                 Socket socket = tcpListener.AcceptSocket();
                 Thread startListening = new Thread(() => handleClient(socket));
-                startListening.Start(socket);
+                startListening.Start();
                 
             }
             tcpListener.Stop();
@@ -79,7 +91,7 @@ namespace Millionaires_Problem
                 socket.Receive(conversation);
                 
             
-                if (conversation[0]=='\r')
+                if (Encoding.UTF8.GetString(conversation)[0]=='\r')
                 {
                     break;
                 }
@@ -100,18 +112,20 @@ namespace Millionaires_Problem
         }
         public static void checkRich(millClass temp)
         {
-            lock (richest)
-            {
+            
                 if (richest == null)
                 {
                     richest = temp;
                 }
                 else
                 {
-                    if (richest.Money < temp.Money)
-                        richest = temp;
+                    lock (richest)
+                    {
+                        if (richest.Money < temp.Money)
+                            richest = temp;
+                    }
                 }
-            }
+            
         }
 
         public void sendToAll2(millClass newMill)
@@ -134,13 +148,13 @@ namespace Millionaires_Problem
             while (stop)
             {
                 UdpClient client = new UdpClient();
-                IPEndPoint ip = new IPEndPoint(IPAddress.Broadcast, 5656);
+                IPEndPoint ip = new IPEndPoint(IPAddress.Broadcast, 5696);
 
                 byte[] bytes = BitConverter.GetBytes(Int16.Parse(((IPEndPoint)tcpListener.LocalEndpoint).Port.ToString()));
                 if (BitConverter.IsLittleEndian)
                     Array.Reverse(bytes);
 
-                byte[] bytesReturn = Encoding.ASCII.GetBytes("IntroToNets" + name);
+                byte[] bytesReturn = Encoding.ASCII.GetBytes("IntroToNets" + MakeName(name));
                 byte[] res = new byte[bytes.Length + bytesReturn.Length];
                 for(int i = 0; i < bytesReturn.Length; i++)
                 {
