@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Millionaires_Problem
@@ -56,7 +57,6 @@ namespace Millionaires_Problem
 
                 tcp.Connect(iPEndPoint.Address, port);
                 Console.WriteLine("[I am now aboard " + boatName + "!]");
-
                 NetworkStream netStream = tcp.GetStream();
                 if (netStream.CanRead)
                 {
@@ -68,7 +68,7 @@ namespace Millionaires_Problem
                 }
                 if (netStream.CanWrite)
                 {
-                    Byte[] sendBytes = Encoding.UTF8.GetBytes(name);
+                    Byte[] sendBytes = Encoding.ASCII.GetBytes(name);
                     netStream.Write(sendBytes, 0, sendBytes.Length);
                     
 
@@ -90,6 +90,8 @@ namespace Millionaires_Problem
         }
         public void update(NetworkStream netStream)
         {
+            Thread t =new Thread(() => listen(netStream));
+            t.Start();
             String a = Console.ReadLine();
             while (a[0] != '\r')
             {
@@ -102,7 +104,22 @@ namespace Millionaires_Problem
                 a = Console.ReadLine();
             
             }
+            t.Abort();
         }
+        public void listen(NetworkStream nt)
+        {
+            while (true)
+            {
+                if (nt.CanRead)
+                {
+                    byte[] bytes = new byte[tcp.ReceiveBufferSize];
+                    nt.Read(bytes, 0, (int)tcp.ReceiveBufferSize);
+                    String check = Encoding.UTF8.GetString(bytes);
+                    Console.WriteLine(getData(check));
+                }
+            }
+        }
+
 
 
     }
