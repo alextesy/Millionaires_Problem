@@ -31,12 +31,11 @@ namespace Millionaires_Problem
         {
             this.name = name;
             IPAddress ip = IPAddress.Parse(GetLocalIPAddress());
-            this.tcpListener = new TcpListener(0);
+            this.tcpListener = new TcpListener(ip, 0);
         }
         public static void stoptheBoat() {
             String a = Console.ReadLine();
-            if(a[0]=='\r')
-                stop = false;
+            stop = false;
             
         }
 
@@ -72,13 +71,24 @@ namespace Millionaires_Problem
             }
             tcpListener.Stop();
         }
+
+       public string getData(string data)
+        {
+            int i = 0;
+            for(i = 0; i < data.Length; i++)
+            {
+                if (data[i] == '\0')
+                    break;
+            }
+            return data.Substring(0, i);
+        }
         public void handleClient(Socket socket)
         {
             byte[] msg = Encoding.ASCII.GetBytes("Wellcome to the " + name + "! What is your name?");
             socket.Send(msg);
             byte[] answer = new byte[256];
             socket.Receive(answer);
-            String millName = Encoding.UTF8.GetString(answer);
+            String millName = getData(Encoding.ASCII.GetString(answer));
             millClass temp = new millClass(socket, millName, 0);
             lock (millDic) {
                 millDic.Add(millName, temp);
@@ -95,10 +105,12 @@ namespace Millionaires_Problem
                 {
                     break;
                 }
-                int money=Int32.Parse(Encoding.UTF8.GetString(answer));
-                temp.Money = money;
-                checkRich(temp);
-                sendToAll2(temp);
+                if(Int32.TryParse(Encoding.UTF8.GetString(answer), out int money))
+                {
+                    temp.Money = money;
+                    checkRich(temp);
+                    sendToAll2(temp);
+                }
 
             }
             lock (millDic)
