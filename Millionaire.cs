@@ -25,16 +25,17 @@ namespace Millionaires_Problem
             
             millDic = new Dictionary<string, millClass>();
             this.name = name;
-            IPEndPoint localpt = new IPEndPoint(IPAddress.Any, 4569);
-            udp = new UdpClient();
-            udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            udp.Client.Bind(localpt);
+           
 
         }
         public void Looking()
         {
             while (true)
             {
+                IPEndPoint localpt = new IPEndPoint(IPAddress.Any, 4569);
+                udp = new UdpClient();
+                udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                udp.Client.Bind(localpt);
                 boatName = "";
                 stop = false;
                 tcp = new TcpClient();
@@ -140,8 +141,8 @@ namespace Millionaires_Problem
         }
         public void listen(NetworkStream nt)
         {
-            try
-            {
+            
+            
                 while (true)
                 {
                     if (nt.CanRead)
@@ -149,15 +150,15 @@ namespace Millionaires_Problem
                         byte[] bytes = new byte[tcp.ReceiveBufferSize];
                         nt.Read(bytes, 0, (int)tcp.ReceiveBufferSize);
                         String check = Encoding.ASCII.GetString(bytes);
+                        if (check[0] == '\0')
+                        {
+                            threadPool[0].Abort();
+                            threadPool[1].Abort();
+                        }
                         Console.WriteLine(getData(check));
                     }
                 }
-            }catch(System.IO.IOException e)
-            {
-                threadPool[0].Abort();
-                threadPool[1].Abort();
-                
-            }
+            
             
               
             
