@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -31,12 +32,55 @@ namespace Millionaires_Problem
         {
             this.name = name;
             IPAddress ip = IPAddress.Parse(GetLocalIPAddress());
-            this.tcpListener = new TcpListener(ip, 0);
+            this.tcpListener = new TcpListener(ip, Port());
+        }
+
+        private int Port()
+        {
+            bool PortAvailable = false;
+            int port = 0;
+            Random randPort = new Random();
+            //loop till you find a port which is available
+            while (!PortAvailable)
+            {
+                //get a random number 
+                port = randPort.Next(1000, 9999);
+                //check if the port is not in use
+                PortAvailable = this.PortAvailable(port);
+            }
+            return port;
+        }
+        //function to check if the port sent is in use
+        //returns false if the port is in use or else return true
+        private bool PortAvailable(int port)
+        {
+            IPGlobalProperties ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
+            TcpConnectionInformation[] tcpConnInfoArray = ipGlobalProperties.GetActiveTcpConnections();
+            System.Collections.IEnumerator myEnum = tcpConnInfoArray.GetEnumerator();
+            while (myEnum.MoveNext())
+            {
+                TcpConnectionInformation tcpi = (TcpConnectionInformation)myEnum.Current;
+
+                if (tcpi.LocalEndPoint.Port == port)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
         public static void stoptheBoat() {
-            String a = Console.ReadLine();
-            stop = false;
-            
+            while (true)
+            {
+                String a = Console.ReadLine();
+                stop = false;
+                foreach (millClass m in millDic.Values)
+                {
+                    m.socket.Close();
+                    m.t.Abort();
+                }
+                millDic = new Dictionary<string, millClass>();
+            }
         }
 
         private string MakeName(string name)
@@ -66,8 +110,7 @@ namespace Millionaires_Problem
 
                 Socket socket = tcpListener.AcceptSocket();
                 Thread startListening = new Thread(() => handleClient(socket));
-                startListening.Start();
-                
+                startListening.Start();                
             }
             tcpListener.Stop();
         }
@@ -89,70 +132,85 @@ namespace Millionaires_Problem
             byte[] answer = new byte[256];
             socket.Receive(answer);
             String millName = getData(Encoding.ASCII.GetString(answer));
-            millClass temp = new millClass(socket, millName, 0);
+            String ip = ((IPEndPoint)socket.RemoteEndPoint).Address + ":" + ((IPEndPoint)socket.RemoteEndPoint).Port;
+            millClass temp = new millClass(socket, millName, 0, Thread.CurrentThread);
             lock (millDic) {
-                millDic.Add(millName, temp);
+                millDic.Add(ip, temp);
             }
-            checkRich(temp);
+            checkRich();
             sendToAll(temp);
-            while (stop)
+            try
             {
-                byte[] conversation =new byte[256];
-                socket.Receive(conversation);
-                
-            
-                if (Encoding.UTF8.GetString(conversation)[0]=='\r')
+                while (stop)
                 {
-                    break;
-                }
-                if(Int32.TryParse(Encoding.UTF8.GetString(answer), out int money))
-                {
-                    temp.Money = money;
-                    checkRich(temp);
-                    sendToAll2(temp);
-                }
-
-            }
-            lock (millDic)
-            {
-               millDic.Remove(millName);
-            }
-            socket.Close();
-            
-            
-            
-        }
-        public static void checkRich(millClass temp)
-        {
-            
-                if (richest == null)
-                {
-                    richest = temp;
-                }
-                else
-                {
-                    lock (richest)
+                    byte[] conversation = new byte[256];
+                    socket.Receive(conversation);
+                    if (!SocketConnected(socket))//receive enter
                     {
-                        if (richest.Money < temp.Money)
-                            richest = temp;
+                        break;
+                    }
+                    if (Int32.TryParse(Encoding.ASCII.GetString(conversation), out int money))
+                    {
+                        temp.Money = money;
+                        checkRich();
+                        sendToAll2(temp);
                     }
                 }
-            
+                lock (millDic)
+                {
+                    Thread tmp = millDic[ip].t;
+                    millDic.Remove(ip);
+                    checkRich();
+                    tmp.Abort();
+                }
+                socket.Close();
+            }
+            catch(SocketException e)//boat throw all the millionaires
+            {
+
+            }
+        }
+        bool SocketConnected(Socket s)
+        {
+            bool part1 = s.Poll(1000, SelectMode.SelectRead);
+            bool part2 = (s.Available == 0);
+            if (part1 && part2)
+                return false;
+            else
+                return true;
+        }
+        public static void checkRich()
+        {
+            int max = -1;
+            foreach(millClass m in millDic.Values)
+            {
+                if(m.Money > max)
+                {
+                    richest = m;
+                    max = m.Money;
+                }
+            }
         }
 
         public void sendToAll2(millClass newMill)
         {
             string message = newMill.Name + " has updated his/her income.The richest person on the boat right now is " + richest.Name;
-            foreach (millClass mill in millDic.Values)
+            lock (millDic)
             {
-                mill.socket.Send(Encoding.ASCII.GetBytes(message));
+                foreach (millClass mill in millDic.Values)
+                {
+                    mill.socket.Send(Encoding.ASCII.GetBytes(message));
+                }
             }
         }
         public void sendToAll(millClass newMill) {
             string message = "A Millionaire named " + newMill.Name + " has joined the boat.The richest person on the boat right now is " + richest.Name;
-            foreach(millClass mill in millDic.Values)
+            lock (millDic)
             {
-                mill.socket.Send(Encoding.ASCII.GetBytes(message));
+                foreach (millClass mill in millDic.Values)
+                {
+                    mill.socket.Send(Encoding.ASCII.GetBytes(message));
+                }
             }
         }
         public void Broadcast()
@@ -160,7 +218,7 @@ namespace Millionaires_Problem
             while (stop)
             {
                 UdpClient client = new UdpClient();
-                IPEndPoint ip = new IPEndPoint(IPAddress.Broadcast, 5696);
+                IPEndPoint ip = new IPEndPoint(IPAddress.Broadcast, 4569);
 
                 byte[] bytes = BitConverter.GetBytes(Int16.Parse(((IPEndPoint)tcpListener.LocalEndpoint).Port.ToString()));
                 if (BitConverter.IsLittleEndian)
