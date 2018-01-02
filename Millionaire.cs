@@ -16,20 +16,28 @@ namespace Millionaires_Problem
         private String boatName="";
         private TcpClient tcp;
         Dictionary<String, millClass> millDic;
-
+        private bool stop = false;
+        private static bool groupStop = false;
+        private Thread[] threadPool = new Thread[2];
 
         public Millionaire(String name)
         {
-            tcp = new TcpClient();
+            
             millDic = new Dictionary<string, millClass>();
             this.name = name;
-            udp = new UdpClient(5696);
+            IPEndPoint localpt = new IPEndPoint(IPAddress.Any, 4569);
+            udp = new UdpClient();
+            udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            udp.Client.Bind(localpt);
 
         }
         public void Looking()
         {
             while (true)
             {
+                boatName = "";
+                stop = false;
+                tcp = new TcpClient();
                 IPEndPoint iPEndPoint = new IPEndPoint(IPAddress.Any, 0);
                 Console.WriteLine("[Looking for a new boat...]");
                 byte[] data = udp.Receive(ref iPEndPoint);
@@ -62,21 +70,43 @@ namespace Millionaires_Problem
                 {
                     byte[] bytes = new byte[tcp.ReceiveBufferSize];
                     netStream.Read(bytes, 0, (int)tcp.ReceiveBufferSize);
-                    String check = Encoding.UTF8.GetString(bytes);
+                    String check = Encoding.ASCII.GetString(bytes);
                     Console.WriteLine(getData(check));
-
                 }
                 if (netStream.CanWrite)
                 {
                     Byte[] sendBytes = Encoding.ASCII.GetBytes(name);
                     netStream.Write(sendBytes, 0, sendBytes.Length);
-                    
+
 
                 }
-                update(netStream);
+                groupStop = false;
+                Thread u = new Thread(() => update(netStream));
+                threadPool[0] = u;
+                Thread l = new Thread(() => listen(netStream));
+                threadPool[1] = l;
+                u.Start();
+                l.Start();
+                u.Join();
+                l.Join();
+                  
+                /*while (true)
+                {
+                    if (stop||groupStop)
+                    {
+                        u.Abort();
+                        l.Abort();
+                        if (netStream.CanRead)
+                        {
+                            netStream.Close();
+                        }
+                        boatName="";
+                        break;
+                        
+
+                    }
+                }*/
             }
-
-
         }
         public string getData(string data)
         {
@@ -90,34 +120,47 @@ namespace Millionaires_Problem
         }
         public void update(NetworkStream netStream)
         {
-            Thread t =new Thread(() => listen(netStream));
-            t.Start();
             String a = Console.ReadLine();
-            while (a[0] != '\r')
-            {
+            while(true){
+
                 if (netStream.CanWrite)
                 {
-                    Byte[] sendBytes = Encoding.UTF8.GetBytes(a);
-
+                    Byte[] sendBytes = Encoding.ASCII.GetBytes(a);
                     netStream.Write(sendBytes, 0, sendBytes.Length);
+
+                }
+                if (a.Length == 0)
+                {
+                    netStream.Close();
+                    threadPool[1].Abort();
+                    threadPool[0].Abort();
                 }
                 a = Console.ReadLine();
-            
             }
-            t.Abort();
         }
         public void listen(NetworkStream nt)
         {
-            while (true)
+            try
             {
-                if (nt.CanRead)
+                while (true)
                 {
-                    byte[] bytes = new byte[tcp.ReceiveBufferSize];
-                    nt.Read(bytes, 0, (int)tcp.ReceiveBufferSize);
-                    String check = Encoding.UTF8.GetString(bytes);
-                    Console.WriteLine(getData(check));
+                    if (nt.CanRead)
+                    {
+                        byte[] bytes = new byte[tcp.ReceiveBufferSize];
+                        nt.Read(bytes, 0, (int)tcp.ReceiveBufferSize);
+                        String check = Encoding.ASCII.GetString(bytes);
+                        Console.WriteLine(getData(check));
+                    }
                 }
+            }catch(System.IO.IOException e)
+            {
+                threadPool[0].Abort();
+                threadPool[1].Abort();
+                
             }
+            
+              
+            
         }
 
 
