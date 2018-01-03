@@ -145,10 +145,9 @@ namespace Millionaires_Problem
                 {
                     byte[] conversation = new byte[256];
                     socket.Receive(conversation);
-                    if (!SocketConnected(socket))//receive enter
-                    {
+                    
+                    if (Encoding.ASCII.GetString(conversation)[0] == '\r' && Encoding.ASCII.GetString(conversation)[0] == '\n')
                         break;
-                    }
                     if (Int32.TryParse(Encoding.ASCII.GetString(conversation), out int money))
                     {
                         temp.Money = money;
@@ -164,6 +163,7 @@ namespace Millionaires_Problem
                     tmp.Abort();
                 }
                 socket.Close();
+                 
             }
             catch(SocketException e)//boat throw all the millionaires
             {
@@ -182,12 +182,15 @@ namespace Millionaires_Problem
         public static void checkRich()
         {
             int max = -1;
-            foreach(millClass m in millDic.Values)
+            lock (millDic)
             {
-                if(m.Money > max)
+                foreach (millClass m in millDic.Values)
                 {
-                    richest = m;
-                    max = m.Money;
+                    if (m.Money > max)
+                    {
+                        richest = m;
+                        max = m.Money;
+                    }
                 }
             }
         }

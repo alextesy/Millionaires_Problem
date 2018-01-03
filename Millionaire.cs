@@ -89,8 +89,6 @@ namespace Millionaires_Problem
                 u.Start();
                 l.Start();
                 u.Join();
-                l.Join();
-                  
                 /*while (true)
                 {
                     if (stop||groupStop)
@@ -126,13 +124,13 @@ namespace Millionaires_Problem
 
                 if (netStream.CanWrite)
                 {
+                    a = a + "\r\n";
                     Byte[] sendBytes = Encoding.ASCII.GetBytes(a);
                     netStream.Write(sendBytes, 0, sendBytes.Length);
 
                 }
-                if (a.Length == 0)
+                if (a[0] == '\r'&& a[1] == '\n')
                 {
-                    netStream.Close();
                     threadPool[1].Abort();
                     threadPool[0].Abort();
                 }
